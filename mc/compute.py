@@ -132,6 +132,9 @@ def dis_matrix_global(matrix, individuals, function):
 def dis_matrix_individual(matrix, individuals, id_scan, function):
     """ 
     MC 23/03/21
+    To compute the dissimilarity matrix for an individual for the metrics of interest 
+    (Social distance, centrality or constraint)
+    
     Inputs
         matrix : matrix from which to compute dissimilarity
         individuals : list of all the individuals in the colony
