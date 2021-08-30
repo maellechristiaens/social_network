@@ -258,16 +258,16 @@ def dsi_affiliative(list_of_b, ind, files):
 
                 for i in ind: #for all the individuals in the colony
                     if i in str(data.Modifiers[rank]): #if this individual is the subject of this grooming
-                        matrices_b['1 Debut Grooming'][ind.index(i),ind.index(focal)]+=duration 
-                        matrices_nb_oc['1 Debut Grooming'][ind.index(i),ind.index(focal)]+= 1
-                        matrices_b['1 Debut Grooming'][ind.index(focal),ind.index(i)]+=duration
+                        matrices_b['1 Debut Grooming'][ind.index(i),ind.index(focal)]+=duration #add the duration of this grooming to the right element of the matrix 
+                        matrices_nb_oc['1 Debut Grooming'][ind.index(i),ind.index(focal)]+= 1 #add 1 to the number of interactions that happened between these 2 individuals
+                        matrices_b['1 Debut Grooming'][ind.index(focal),ind.index(i)]+=duration #do the same symetrically
                         matrices_nb_oc['1 Debut Grooming'][ind.index(focal),ind.index(i)]+= 1
-                        total['1 Debut Grooming'] += duration
-                        nb_events['1 Debut Grooming'] += 1
+                        total['1 Debut Grooming'] += duration #add the duration to the total time spent by the colony doing this behavior
+                        nb_events['1 Debut Grooming'] += 1 #add 1 to the total number of events of that behavior
 
 
-            elif data.Behavior[rank] in list_of_b and data.Behavior[rank] != '1 Debut Grooming':
-                for i in ind:
+            elif data.Behavior[rank] in list_of_b and data.Behavior[rank] != '1 Debut Grooming': #if the behavior is an affiliative behavior but not a grooming
+                for i in ind: #do the same as above
                     if i in str(data.Modifiers[rank]):
                         matrices_b[data.Behavior[rank]][ind.index(i),ind.index(focal)]+=data['Duration (s)'][rank]
                         matrices_nb_oc[data.Behavior[rank]][ind.index(i),ind.index(focal)]+= 1
@@ -276,13 +276,13 @@ def dsi_affiliative(list_of_b, ind, files):
                         total[data.Behavior[rank]] += data['Duration (s)'][rank]
                         nb_events[data.Behavior[rank]] += 1
                         
-    for b in list_of_b:
-        matrices_b[b][matrices_b[b] != 0] = matrices_b[b][matrices_b[b] != 0]/matrices_nb_oc[b][matrices_nb_oc[b] != 0]
-        mean = total[b]/nb_events[b]
-        matrices_b[b] = matrices_b[b]/(mean)
-        matrix += matrices_b[b]
+    for b in list_of_b: #for all behaviors
+        matrices_b[b][matrices_b[b] != 0] = matrices_b[b][matrices_b[b] != 0]/matrices_nb_oc[b][matrices_nb_oc[b] != 0] #all the non-null elements of the matrix are divided by the number of occurences of this behavior between the 2 individuals concerned (to get a mean time spent doing this interaction)
+        mean = total[b]/nb_events[b] #compute the global mean time spent by the colony doing each behavior
+        matrices_b[b] = matrices_b[b]/(mean) #divide the each mean by the global mean : if 2 individuals spend more time than the colony mean doing this behavior, their element will be above 1, otherwise it will be below
+        matrix += matrices_b[b] #add these values across all behaviors
         
-    matrix = matrix/len(list_of_b)
+    matrix = matrix/len(list_of_b) #divide the sum of all these values by the number of behaviors considered
     return matrix
 
 
@@ -298,12 +298,11 @@ def matrix_grooming(ind, fichiers, symetrical=False):
         matrix of grooming for each dyad
     """
     
-    matrix = np.zeros(shape=(len(ind), len(ind))) #Initiation
-    for fichier in fichiers :
-        print(fichier)
-        data=pd.read_excel(fichier) #Regarde les focaux un par un
+    matrix = np.zeros(shape=(len(ind), len(ind))) #Initialisation
+    for fichier in fichiers : #for all files
+        data=pd.read_excel(fichier) #read them
 
-        for rang in range(len(data)): #Regarde le focal ligne par ligne 
+        for rang in range(len(data)): #look at each line of data
             focal = data.Subject[rang] #Pour chaque ligne, regarde l'individu pris en focal
             if data.Behavior[rang] == '1 Debut Grooming' and data.Modifiers[rang]!='None': #si le behavior est du début de grooming
                 start = data['Start (s)'][rang] #Stocker le temps de départ de ce grooming

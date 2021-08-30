@@ -216,74 +216,73 @@ def dsi_aggressive(list_of_b, ind, fichiers, rand=False,giv=None, rece=None):
     return matrix
 
 
-def dsi_affiliative(list_of_b, ind, fichiers):
+def dsi_affiliative(list_of_b, ind, files):
     """
     MC 07/04/21 
     Inputs :
         list_of_b : list of behaviors on which to compute the DSI
         ind : individus from which to compute the DSI
-        fichiers : where the data are stored
+        files : where the data are stored
         
     Outputs:
         matrix of DSI for each dyad
     """
-    means_b = {str(i) : 0 for i in list_of_b}
-    matrices_b = { str(i) : np.zeros(shape=(len(ind), len(ind))) for i in list_of_b}
-    matrices_nb_oc = { str(i) : np.zeros(shape=(len(ind), len(ind))) for i in list_of_b}
-    matrix = np.zeros(shape=(len(ind), len(ind)))
-    total = { str(i) : 0 for i in list_of_b}
-    nb_events = { str(i) : 0 for i in list_of_b}
-    for fichier in fichiers :
-        data=pd.read_csv(fichier, sep=';', encoding="latin-1")
-        for rang in range(len(data)):
-            focal = data.Subject[rang] #Pour chaque ligne, regarde l'individu pris en focal
-            if data.Behavior[rang] == '1 Debut Grooming' and data.Modifiers[rang]!='None': #si le behavior est du début de grooming
-                start = data['Start (s)'][rang] #Stocker le temps de départ de ce grooming
-                end=0
-                for i in range(rang, len(data)):
-                    if data.Behavior[i]=='2 Zone de Grooming':
-                        groomed = re.findall(r'\d+', data.Modifiers[i])
-                        rang2 = i
-                        break
-                for j in range (rang2, len(data)):
-                    if data.Behavior[j] == '4 Fin Grooming':
-                        who = re.findall(r'\d+', data.Modifiers[j])
-                        if who == groomed:
-                            end = data['Stop (s)'][j]
-                            break
-                if end !=0:
-                    duration = abs(end - start)
+    matrices_b = { str(i) : np.zeros(shape=(len(ind), len(ind))) for i in list_of_b} #initialisation of all the interaction matrices
+    matrices_nb_oc = { str(i) : np.zeros(shape=(len(ind), len(ind))) for i in list_of_b} #initialisation of the number of occurence of each behavior
+    matrix = np.zeros(shape=(len(ind), len(ind))) #initialisation of the final DSI matrix 
+    total = { str(i) : 0 for i in list_of_b} #initialisation of the total duration of each behavior
+    nb_events = { str(i) : 0 for i in list_of_b} #initialisation of the total number of each behavior
+    for file in files : #for each file where the data are stored
+        data=pd.read_csv(file, sep=';', encoding="latin-1") #read the file
+        for rank in range(len(data)): #for each line of data
+            focal = data.Subject[rank] #store which individual is in focal
+            if data.Behavior[rank] == '1 Debut Grooming' and data.Modifiers[rank]!='None': #if the behavior of this line is a start of grooming (and not an error)
+                start = data['Start (s)'][rank] #store the time of the beginning of this grooming
+                end=0 #reset the time of the end of this grooming
+                rank2 = rank #initialisation of the line number from which to look for the end of the grooming
+                for i in range(rank, len(data)): #for all the lines after the line considered
+                    if data.Behavior[i]=='2 Zone de Grooming': 
+                        groomed = re.findall(r'\d+', data.Modifiers[i]) #store the name of the individual participating in the grooming with the focal
+                        rank2 = i #update the line number from which to look for the end of the grooming 
+                        break #stop the for loop once the grooming partner has been found
+                for j in range (rank2, len(data)): #for all the lines after the line considered
+                    if data.Behavior[j] == '4 Fin Grooming' and data.Subject[j] == focal: #if it's an end of grooming and we're still with the same focal
+                        who = re.findall(r'\d+', data.Modifiers[j]) #look who is the subject of this grooming
+                        if who == groomed: #if it's the same as the one stored before (because several individuals can participate in the same episod of grooming)
+                            end = data['Stop (s)'][j] #update the time of the end of this grooming
+                            break #stop the for loop once the end time has been found
+                if end !=0 and end>start: #if an end has been found and this end is after the beginning
+                    duration = end - start #store the duration of the grooming episod
                 else:
-                    duration = 0 
+                    duration = 0 #otherwise set the duration to 0
 
-                for i in ind:
-                    if i in str(data.Modifiers[rang]):
-                        matrices_b['1 Debut Grooming'][ind.index(i),ind.index(focal)]+=duration
-                        matrices_nb_oc['1 Debut Grooming'][ind.index(i),ind.index(focal)]+= 1
-                        matrices_b['1 Debut Grooming'][ind.index(focal),ind.index(i)]+=duration
+                for i in ind: #for all the individuals in the colony
+                    if i in str(data.Modifiers[rank]): #if this individual is the subject of this grooming
+                        matrices_b['1 Debut Grooming'][ind.index(i),ind.index(focal)]+=duration #add the duration of this grooming to the right element of the matrix 
+                        matrices_nb_oc['1 Debut Grooming'][ind.index(i),ind.index(focal)]+= 1 #add 1 to the number of interactions that happened between these 2 individuals
+                        matrices_b['1 Debut Grooming'][ind.index(focal),ind.index(i)]+=duration #do the same symetrically
                         matrices_nb_oc['1 Debut Grooming'][ind.index(focal),ind.index(i)]+= 1
-                        total['1 Debut Grooming'] += duration
-                        nb_events['1 Debut Grooming'] += 1
+                        total['1 Debut Grooming'] += duration #add the duration to the total time spent by the colony doing this behavior
+                        nb_events['1 Debut Grooming'] += 1 #add 1 to the total number of events of that behavior
 
 
-            elif data.Behavior[rang] in list_of_b and data.Behavior[rang] != '1 Debut Grooming':
-                for i in ind:
-                    if i in str(data.Modifiers[rang]):
-                        matrices_b[data.Behavior[rang]][ind.index(i),ind.index(focal)]+=data['Duration (s)'][rang]
-                        matrices_nb_oc[data.Behavior[rang]][ind.index(i),ind.index(focal)]+= 1
-                        matrices_b[data.Behavior[rang]][ind.index(focal),ind.index(i)]+=data['Duration (s)'][rang]
-                        matrices_nb_oc[data.Behavior[rang]][ind.index(focal),ind.index(i)]+= 1
-                        total[data.Behavior[rang]] += data['Duration (s)'][rang]
-                        nb_events[data.Behavior[rang]] += 1
+            elif data.Behavior[rank] in list_of_b and data.Behavior[rank] != '1 Debut Grooming': #if the behavior is an affiliative behavior but not a grooming
+                for i in ind: #do the same as above
+                    if i in str(data.Modifiers[rank]):
+                        matrices_b[data.Behavior[rank]][ind.index(i),ind.index(focal)]+=data['Duration (s)'][rank]
+                        matrices_nb_oc[data.Behavior[rank]][ind.index(i),ind.index(focal)]+= 1
+                        matrices_b[data.Behavior[rank]][ind.index(focal),ind.index(i)]+=data['Duration (s)'][rank]
+                        matrices_nb_oc[data.Behavior[rank]][ind.index(focal),ind.index(i)]+= 1
+                        total[data.Behavior[rank]] += data['Duration (s)'][rank]
+                        nb_events[data.Behavior[rank]] += 1
                         
-    for b in list_of_b:
-        matrices_b[b][matrices_b[b] != 0]=matrices_b[b][matrices_b[b] != 0]/matrices_nb_oc[b][matrices_nb_oc[b] != 0]
-        nb_dyades = np.count_nonzero(matrices_b[b])/2
-        means_b[b] = total[b]/nb_events[b]
-        matrices_b[b] = matrices_b[b]/(means_b[b])
-        matrix += matrices_b[b]
+    for b in list_of_b: #for all behaviors
+        matrices_b[b][matrices_b[b] != 0] = matrices_b[b][matrices_b[b] != 0]/matrices_nb_oc[b][matrices_nb_oc[b] != 0] #all the non-null elements of the matrix are divided by the number of occurences of this behavior between the 2 individuals concerned (to get a mean time spent doing this interaction)
+        mean = total[b]/nb_events[b] #compute the global mean time spent by the colony doing each behavior
+        matrices_b[b] = matrices_b[b]/(mean) #divide the each mean by the global mean : if 2 individuals spend more time than the colony mean doing this behavior, their element will be above 1, otherwise it will be below
+        matrix += matrices_b[b] #add these values across all behaviors
         
-    matrix = matrix/len(list_of_b)
+    matrix = matrix/len(list_of_b) #divide the sum of all these values by the number of behaviors considered
     return matrix
 
 
@@ -299,12 +298,11 @@ def matrix_grooming(ind, fichiers, symetrical=False):
         matrix of grooming for each dyad
     """
     
-    matrix = np.zeros(shape=(len(ind), len(ind))) #Initiation
-    for fichier in fichiers :
-        print(fichier)
-        data=pd.read_excel(fichier) #Regarde les focaux un par un
+    matrix = np.zeros(shape=(len(ind), len(ind))) #Initialisation
+    for fichier in fichiers : #for all files
+        data=pd.read_excel(fichier) #read them
 
-        for rang in range(len(data)): #Regarde le focal ligne par ligne 
+        for rang in range(len(data)): #look at each line of data
             focal = data.Subject[rang] #Pour chaque ligne, regarde l'individu pris en focal
             if data.Behavior[rang] == '1 Debut Grooming' and data.Modifiers[rang]!='None': #si le behavior est du début de grooming
                 start = data['Start (s)'][rang] #Stocker le temps de départ de ce grooming
