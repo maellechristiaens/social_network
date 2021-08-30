@@ -2,22 +2,6 @@ import pandas as pd
 import numpy as np
 import os
 
-def go_through(matrix):
-    """
-    MC 28/06/2021
-    This function creates an iterator to go through each element of the 
-    matrix (helpful to reduce the number of rows in the code)
-    Inputs:
-        matrix: the matrix we want to go through
-    Outputs:
-        An iterable of the matrix
-    
-    """
-    for i in range(len(matrix)):
-        for j in range(len(matrix)):
-            yield matrix[i][j]
-
-
 def list_files(path):
     """
     MC 14/06/21
